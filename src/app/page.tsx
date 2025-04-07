@@ -1,103 +1,180 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useEffect, useState } from 'react'
+import axios from 'axios'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { cn } from '@/lib/utils'
+
+export default function HealthDashboard() {
+  const [data, setData] = useState<any>({})
+  const [history, setHistory] = useState<any[]>([])
+  const [ssid, setSsid] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState('')
+  const [showConfig, setShowConfig] = useState(false)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await axios.get('https://healthmonitoring-production.up.railway.app/sensor/data')
+        setData(res.data)
+      } catch (err) {
+        console.error('Failed to fetch current sensor data', err)
+      }
+    }
+
+    fetchData()
+    const interval = setInterval(fetchData, 5000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const res = await axios.get('https://healthmonitoring-production.up.railway.app/sensor/history')
+        setHistory(res.data.reverse())
+      } catch (err) {
+        console.error('Failed to fetch history', err)
+      }
+    }
+
+    fetchHistory()
+  }, [])
+
+  const handleConfigSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await axios.post('https://healthmonitoring-production.up.railway.app/sensor/configure', { ssid, password })
+      setMessage('✅ Sensor configured successfully')
+    } catch (err) {
+      console.error('Configuration failed', err)
+      setMessage('❌ Configuration failed')
+    }
+  }
+
+  const showAlert = () => {
+    if (!data.bpm) return null
+    if (data.bpm < 60 || data.bpm > 100) {
+      return (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTitle>⚠️ Abnormal Heart Rate</AlertTitle>
+          <AlertDescription>
+            Current BPM is <b>{data.bpm}</b>. Please consult a doctor if this persists.
+          </AlertDescription>
+        </Alert>
+      )
+    }
+    return (
+      <Alert className="mb-4">
+        <AlertTitle>✅ Heart Rate Normal</AlertTitle>
+        <AlertDescription>
+          BPM is <b>{data.bpm}</b>. No issues detected.
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="max-w-5xl mx-auto py-8 px-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-4xl font-bold text-center flex-grow">🩺 Health Monitoring Dashboard</h1>
+        <Button className="ml-4" onClick={() => setShowConfig(!showConfig)}>Configure</Button>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      {showConfig && (
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>🔧 Configure Sensor Wi-Fi</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <form className="space-y-4" onSubmit={handleConfigSubmit}>
+              <div>
+                <Label htmlFor="ssid">SSID</Label>
+                <Input id="ssid" value={ssid} onChange={(e) => setSsid(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+              </div>
+              <Button type="submit">Submit</Button>
+            </form>
+            {message && <p className="mt-4 text-sm font-medium text-green-600">{message}</p>}
+          </CardContent>
+        </Card>
+      )}
+
+      <Tabs defaultValue="current">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="current">Live Data</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="current">
+          {showAlert()}
+          <Card>
+            <CardHeader>
+              <CardTitle>📡 Live Sensor Data</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 p-6">
+              <div className="text-xl">❤️ Heart Rate: <b>{data.bpm ?? '--'} bpm</b></div>
+              <div className="text-xl">📊 Avg BPM: <b>{data.bpm_avg ?? '--'} bpm</b></div>
+              <div className="text-xl">🌡️ Body Temp: <b>{data.ds18b20_temp ?? '--'} °C</b></div>
+              <div className="text-xl">🏠 Room Temp: <b>{data.dht11_temp ?? '--'} °C</b></div>
+              <div className="text-xl">💧 Humidity: <b>{data.humidity ?? '--'}%</b></div>
+              <div className="text-sm text-gray-500">Updated: {data.timestamp?.slice(0, 19).replace('T', ' ')}</div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>📈 BPM Over Time</CardTitle>
+              </CardHeader>
+              <CardContent className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={history.map(item => ({
+                    bpm: item.bpm,
+                    timestamp: item.timestamp?.slice(11, 19),
+                  }))}>
+                    <XAxis dataKey="timestamp" tick={{ fontSize: 10 }} />
+                    <YAxis domain={[40, 160]} tick={{ fontSize: 10 }} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="bpm" stroke="#ef4444" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>🕑 Historical Readings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-64 border rounded-lg p-4">
+                  <ul className="space-y-2 text-sm">
+                    {history.map((item, index) => (
+                      <li key={index} className="flex justify-between">
+                        <span>❤️ {item.bpm} bpm</span>
+                        <span>🌡️ {item.ds18b20_temp} °C</span>
+                        <span>{item.timestamp?.slice(11, 19)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
-  );
+  )
 }
