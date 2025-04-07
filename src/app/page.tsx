@@ -11,9 +11,19 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
+type SensorData = {
+  bpm: number
+  bpm_avg: number
+  ds18b20_temp: number
+  dht11_temp: number
+  humidity: number
+  timestamp: string
+}
+
+
 export default function HealthDashboard() {
-  const [data, setData] = useState<any>({})
-  const [history, setHistory] = useState<any[]>([])
+  const [data, setData] = useState<SensorData>()
+  const [history, setHistory] = useState<SensorData[]>([])
   const [ssid, setSsid] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
@@ -59,7 +69,7 @@ export default function HealthDashboard() {
   }
 
   const showAlert = () => {
-    if (!data.bpm) return null
+    if (!data) return null
     if (data.bpm < 60 || data.bpm > 100) {
       return (
         <Alert variant="destructive" className="mb-4">
@@ -121,14 +131,19 @@ export default function HealthDashboard() {
             <CardHeader>
               <CardTitle>📡 Live Sensor Data</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 p-6">
-              <div className="text-xl">❤️ Heart Rate: <b>{data.bpm ?? '--'} bpm</b></div>
-              <div className="text-xl">📊 Avg BPM: <b>{data.bpm_avg ?? '--'} bpm</b></div>
-              <div className="text-xl">🌡️ Body Temp: <b>{data.ds18b20_temp ?? '--'} °C</b></div>
-              <div className="text-xl">🏠 Room Temp: <b>{data.dht11_temp ?? '--'} °C</b></div>
-              <div className="text-xl">💧 Humidity: <b>{data.humidity ?? '--'}%</b></div>
-              <div className="text-sm text-gray-500">Updated: {data.timestamp?.slice(0, 19).replace('T', ' ')}</div>
-            </CardContent>
+            {data && 'bpm' in data ? (
+              <CardContent className="grid gap-4 p-6">
+                <div className="text-xl">❤️ Heart Rate: <b>{data.bpm ?? '--'} bpm</b></div>
+                <div className="text-xl">📊 Avg BPM: <b>{data.bpm_avg ?? '--'} bpm</b></div>
+                <div className="text-xl">🌡️ Body Temp: <b>{data.ds18b20_temp ?? '--'} °C</b></div>
+                <div className="text-xl">🏠 Room Temp: <b>{data.dht11_temp ?? '--'} °C</b></div>
+                <div className="text-xl">💧 Humidity: <b>{data.humidity ?? '--'}%</b></div>
+                <div className="text-sm text-gray-500">Updated: {data.timestamp?.slice(0, 19).replace('T', ' ')}</div>
+              </CardContent>
+            ) : (
+              <div className="p-6 text-red-500 font-medium"><b>⚠️ Data Invalid or Not Loaded</b></div>
+            )}
+
           </Card>
         </TabsContent>
 
