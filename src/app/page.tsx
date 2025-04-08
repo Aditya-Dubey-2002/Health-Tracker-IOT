@@ -11,8 +11,10 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 
+// Utility function to convert UTC to IST
 const convertToIST = (utcTimestamp: string) => {
-  const date = new Date(utcTimestamp);
+  const utcTime = new Date(utcTimestamp);
+  const date = new Date(utcTime.getTime() + (5.5 * 60 * 60 * 1000));
   return date.toLocaleString('en-US', { 
     timeZone: 'Asia/Kolkata',
     hour12: false,
@@ -45,6 +47,9 @@ export default function HealthDashboard() {
   const [message, setMessage] = useState('')
   const [showConfig, setShowConfig] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [diagnosis, setDiagnosis] = useState('')
+  const [isDiagnosisLoading, setIsDiagnosisLoading] = useState(false)
+  const [symptoms, setSymptoms] = useState('')
 
   const fetchData = async () => {
     try {
@@ -64,6 +69,51 @@ export default function HealthDashboard() {
       setTotalPages(res.data.totalPages)
     } catch (err) {
       console.error('Failed to fetch history', err)
+    }
+  }
+
+  const fetchDiagnosis = async () => {
+    if (!data) return
+    setIsDiagnosisLoading(true)
+
+    const heartRate = data.bpm_avg
+    const bodyTempC = data.ds18b20_temp
+    const roomTemp = data.dht11_temp
+    const humidity = data.humidity
+
+    try {
+      const res = await axios.post(
+        'https://openrouter.ai/api/v1/chat/completions',
+        {
+          model: 'openai/gpt-3.5-turbo',
+          messages: [
+              {
+                role: 'system',
+                content:
+                  'You are a helpful medical assistant. and tell me the condition the patient might be in and take consideration of surrounding under 100 words',
+              },
+              {
+                role: 'user',
+                content: `Patient has a heart rate of ${heartRate} bpm and a body temperature of ${bodyTempC.toFixed(1)}°C and currently the room temperature is ${roomTemp.toFixed(1)}°C and humidity is ${humidity.toFixed(1)}%. ${symptoms ? `Patient reported symptoms: ${symptoms}` : 'Patient reported no symptoms.'} What is the condition?`,
+              },
+            ],
+          temperature: 0.7,
+          max_tokens: 100
+        },
+        {
+          headers: {
+            'Authorization': `Bearer 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`,
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+
+      setDiagnosis(res.data.choices[0].message.content.trim())
+    } catch (err) {
+      console.error(err)
+      setDiagnosis('❌ Failed to get diagnosis.')
+    } finally {
+      setIsDiagnosisLoading(false)
     }
   }
 
@@ -91,7 +141,7 @@ export default function HealthDashboard() {
   const renderAlert = () => {
     if (!data) return null
     const isAbnormalBPM = data.bpm_avg < 60 || data.bpm_avg > 100
-    const isAbnormalTemp = data.ds18b20_temp < 36.1 || data.ds18b20_temp > 37.2
+    const isAbnormalTemp = data.ds18b20_temp < 36.2 || data.ds18b20_temp > 37.5
 
     if (!isAbnormalBPM && !isAbnormalTemp) return null
 
@@ -178,6 +228,45 @@ export default function HealthDashboard() {
                   <div className="p-6 text-red-500 font-medium"><b>⚠️ Data Invalid or Not Loaded</b></div>
                 )}
               </Card>
+
+              <Card className="mt-4">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>🤖 AI Diagnosis</CardTitle>
+                  <Button 
+                    onClick={fetchDiagnosis} 
+                    disabled={isDiagnosisLoading || !data}
+                    className="flex items-center gap-2"
+                  >
+                    {isDiagnosisLoading ? (
+                      <>
+                        <span className="animate-spin">🔄</span> Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <span>🔄</span> Get Diagnosis
+                      </>
+                    )}
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-6 space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="symptoms">Additional Symptoms (Optional)</Label>
+                    <Input 
+                      id="symptoms" 
+                      placeholder="Enter any symptoms you're experiencing..." 
+                      value={symptoms}
+                      onChange={(e) => setSymptoms(e.target.value)}
+                    />
+                  </div>
+                  {diagnosis ? (
+                    <div className="text-lg">{diagnosis}</div>
+                  ) : (
+                    <div className="text-gray-500 italic">
+                      Click the button above to get an AI diagnosis based on your current sensor readings.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </>
           )}
         </TabsContent>
@@ -197,7 +286,7 @@ export default function HealthDashboard() {
                 </CardHeader>
                 <CardContent className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={formattedHistory}>
+                    <LineChart data={[...formattedHistory].reverse()}>
                       <XAxis dataKey="timestamp" tick={{ fontSize: 10 }} />
                       <YAxis domain={[40, 160]} tick={{ fontSize: 10 }} />
                       <Tooltip />
@@ -215,7 +304,7 @@ export default function HealthDashboard() {
                 </CardHeader>
                 <CardContent className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={formattedHistory}>
+                    <LineChart data={[...formattedHistory].reverse()}>
                       <XAxis dataKey="timestamp" tick={{ fontSize: 10 }} />
                       <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} />
                       <Tooltip />
@@ -233,7 +322,7 @@ export default function HealthDashboard() {
                 </CardHeader>
                 <CardContent className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={formattedHistory}>
+                    <LineChart data={[...formattedHistory].reverse()}>
                       <XAxis dataKey="timestamp" tick={{ fontSize: 10 }} />
                       <YAxis domain={['auto', 'auto']} tick={{ fontSize: 10 }} />
                       <Tooltip />
