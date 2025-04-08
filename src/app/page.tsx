@@ -75,7 +75,7 @@ export default function HealthDashboard() {
   const fetchDiagnosis = async () => {
     if (!data) return
     setIsDiagnosisLoading(true)
-
+    console.log("Test " + process.env.NEXT_PUBLIC_OPENROUTER_API_KEY);
     const heartRate = data.bpm_avg
     const bodyTempC = data.ds18b20_temp
     const roomTemp = data.dht11_temp
