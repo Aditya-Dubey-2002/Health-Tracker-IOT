@@ -102,7 +102,7 @@ export default function HealthDashboard() {
         },
         {
           headers: {
-            'Authorization': `Bearer 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`,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENROUTER_API_KEY}`,
             'Content-Type': 'application/json'
           }
         }
