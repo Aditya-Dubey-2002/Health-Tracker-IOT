@@ -143,18 +143,30 @@ export default function HealthDashboard() {
     const isAbnormalBPM = data.bpm_avg < 60 || data.bpm_avg > 100
     const isAbnormalTemp = data.ds18b20_temp < 36.2 || data.ds18b20_temp > 37.5
 
-    if (!isAbnormalBPM && !isAbnormalTemp) return null
+    if (isAbnormalBPM || isAbnormalTemp) {
+      return (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTitle>⚠️ Abnormal Readings Detected</AlertTitle>
+          <AlertDescription>
+            {isAbnormalBPM && (
+              <div>Average BPM is <b>{Math.round(data.bpm_avg)}</b> (Normal range: 60-100). Please consult a doctor if this persists.</div>
+            )}
+            {isAbnormalTemp && (
+              <div>Average Body Temperature is <b>{data.ds18b20_temp.toFixed(1)}°C</b> (Normal range: 36.1-37.2°C). Please consult a doctor if this persists.</div>
+            )}
+          </AlertDescription>
+        </Alert>
+      )
+    }
 
     return (
-      <Alert variant="destructive" className="mb-4">
-        <AlertTitle>⚠️ Abnormal Readings Detected</AlertTitle>
-        <AlertDescription>
-          {isAbnormalBPM && (
-            <div>Average BPM is <b>{Math.round(data.bpm_avg)}</b> (Normal range: 60-100). Please consult a doctor if this persists.</div>
-          )}
-          {isAbnormalTemp && (
-            <div>Average Body Temperature is <b>{data.ds18b20_temp.toFixed(1)}°C</b> (Normal range: 36.1-37.2°C). Please consult a doctor if this persists.</div>
-          )}
+      <Alert variant="default" className="mb-4 bg-green-50 border-green-200">
+        <AlertTitle className="text-green-700">✅ All Readings Normal</AlertTitle>
+        <AlertDescription className="text-green-600">
+          <div>Your vital signs are within normal ranges:</div>
+          <div>• Heart Rate: <b>{Math.round(data.bpm_avg)} bpm</b> (Normal range: 60-100)</div>
+          <div>• Body Temperature: <b>{data.ds18b20_temp.toFixed(1)}°C</b> (Normal range: 36.1-37.2°C)</div>
+          <div className="mt-1">Continue monitoring your health regularly.</div>
         </AlertDescription>
       </Alert>
     )
