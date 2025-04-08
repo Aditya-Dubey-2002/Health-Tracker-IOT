@@ -39,7 +39,7 @@ export default function HealthDashboard() {
   const [history, setHistory] = useState<SensorData[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
-  const [pageSize, setPageSize] = useState(15)
+  const pageSize = 15
   const [ssid, setSsid] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
